@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dreamy Doll — Pink Fashion Game</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+:root{
+  --pink:#ff5fa2; --pink2:#ff8fc3; --rose:#ffe4f0; --soft:#fff6fa;
+  --purple:#9b78ff; --ink:#392c3a; --muted:#8f7e8d; --white:#fff;
+  --shadow:0 18px 50px rgba(209,75,133,.15);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fcebf3;font-family:"DM Sans",sans-serif;color:var(--ink)}
+button{font:inherit;border:0;cursor:pointer}
+.app{min-height:100vh;display:flex;justify-content:center;padding:24px}
+.phone{width:min(430px,100%);min-height:850px;background:linear-gradient(145deg,#fff,#fff5f9);border-radius:38px;overflow:hidden;box-shadow:0 30px 90px rgba(108,44,73,.2);position:relative}
+.top{padding:24px 22px 12px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:"Playfair Display";font-size:25px;color:#f54d94}
+.logo span{font-family:"DM Sans";font-size:10px;letter-spacing:2px;color:#a58e9d;display:block;margin-top:-2px}
+.icon{width:42px;height:42px;border-radius:15px;background:white;box-shadow:0 8px 25px #eacbd8;display:grid;place-items:center;color:#e54f91;font-size:19px}
+.content{padding:8px 20px 105px}
+.hero{background:linear-gradient(135deg,#ffd6e8,#ffeef6 52%,#e8ddff);border-radius:28px;padding:20px;min-height:255px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hero:before,.hero:after{content:"✦";position:absolute;color:#fff;font-size:22px;opacity:.8}
+.hero:before{right:30px;top:25px}.hero:after{left:24px;bottom:26px}
+.greeting{font-size:13px;font-weight:700;color:#9b5475}.title{font-family:"Playfair Display";font-size:29px;line-height:1.05;margin:5px 0}
+.subtitle{font-size:12px;color:#866d7b}
+.doll{position:absolute;right:25px;bottom:-5px;font-size:145px;filter:drop-shadow(0 12px 10px rgba(147,70,105,.18));line-height:1}
+.badge{position:absolute;left:18px;bottom:17px;background:#fff8;border:1px solid #fff;border-radius:30px;padding:8px 13px;font-size:11px;font-weight:700;backdrop-filter:blur(8px)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:15px 0}
+.stat{background:white;border-radius:18px;padding:13px 10px;box-shadow:0 9px 28px rgba(105,61,82,.07)}
+.stat b{display:block;font-size:15px}.stat span{font-size:10px;color:var(--muted)}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin:22px 2px 12px}
+.section-head h2{font-size:17px;margin:0}.section-head a{font-size:11px;color:var(--pink);font-weight:700}
+.challenges{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.challenge{padding:15px;border-radius:21px;color:white;min-height:140px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.challenge:nth-child(1){background:linear-gradient(145deg,#ff66a7,#f53f88)}
+.challenge:nth-child(2){background:linear-gradient(145deg,#a987ff,#8062df)}
+.challenge .emoji{font-size:38px}.challenge h3{font-size:13px;margin:8px 0 3px}.challenge p{font-size:10px;margin:0;opacity:.88}
+.play{position:absolute;right:12px;bottom:12px;width:32px;height:32px;border-radius:12px;background:#fff;color:#e84d93}
+.nav{position:absolute;bottom:0;left:0;right:0;height:86px;background:#ffffffed;backdrop-filter:blur(18px);display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f4dfe8;padding:10px 10px 14px}
+.nav button{background:transparent;color:#aa98a4;font-size:10px;font-weight:600;display:flex;flex-direction:column;gap:4px;align-items:center}
+.nav button.active{color:var(--pink)}.nav i{font-style:normal;font-size:22px}
+.page{display:none}.page.active{display:block}
+.closet-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.item{background:white;border-radius:22px;padding:14px;box-shadow:0 8px 25px rgba(100,50,75,.06);text-align:center;position:relative}
+.item .pic{height:135px;border-radius:17px;background:linear-gradient(145deg,#fff0f7,#f1eaff);display:grid;place-items:center;font-size:70px}
+.item b{font-size:12px;display:block;margin-top:10px}.item small{color:#a58d9c;font-size:10px}
+.buy{margin-top:8px;background:#ffe0ed;color:#df4384;padding:7px 12px;border-radius:12px;font-size:10px;font-weight:700}
+.modal{position:absolute;inset:0;background:#3d2938aa;backdrop-filter:blur(5px);display:none;align-items:flex-end;z-index:5}
+.modal.show{display:flex}.sheet{background:#fff;border-radius:30px 30px 0 0;width:100%;padding:24px;animation:up .3s ease}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet h2{font-family:"Playfair Display";margin:0 0 6px}.sheet p{font-size:12px;color:var(--muted)}
+.score{font-size:55px;font-family:"Playfair Display";color:var(--pink);text-align:center;margin:18px}
+.primary{width:100%;padding:14px;border-radius:17px;background:linear-gradient(90deg,#ff5fa2,#ff8fc3);color:#fff;font-weight:700}
+.close{position:absolute;right:20px;top:15px;background:#f8edf3;width:34px;height:34px;border-radius:50%}
+@media(max-width:450px){.app{padding:0}.phone{border-radius:0;min-height:100vh}}
+</style>
+</head>
+<body>
+<div class="app"><main class="phone">
+  <header class="top">
+    <div class="logo">Dreamy Doll<span>YOUR PINK WORLD</span></div>
+    <button class="icon" onclick="openModal('profile')">♡</button>
+  </header>
+
+  <section class="content">
+    <div id="home" class="page active">
+      <div class="hero">
+        <div class="greeting">GOOD EVENING, DOLL ✨</div>
+        <div class="title">Make today<br>magical.</div>
+        <div class="subtitle">Style your dream look & collect rewards.</div>
+        <div class="doll">👱🏻‍♀️</div>
+        <div class="badge">✦ Level 07 · Pink Star</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>1,250 🪙</b><span>COINS</span></div>
+        <div class="stat"><b>87 💗</b><span>HEARTS</span></div>
+        <div class="stat"><b>92 ✨</b><span>STYLE SCORE</span></div>
+      </div>
+      <div class="section-head"><h2>Today's challenges</h2><a>VIEW ALL</a></div>
+      <div class="challenges">
+        <div class="challenge"><div class="emoji">🎀</div><h3>Pink Princess</h3><p>Create a dreamy pink look.</p><button class="play" onclick="startChallenge('Pink Princess')">›</button></div>
+        <div class="challenge"><div class="emoji">🪩</div><h3>Glam Night</h3><p>Get ready for the spotlight.</p><button class="play" onclick="startChallenge('Glam Night')">›</button></div>
+      </div>
+      <div class="section-head"><h2>Quick makeover</h2><a onclick="showPage('closet')">OPEN CLOSET</a></div>
+      <div class="item" style="display:flex;align-items:center;gap:15px;text-align:left;padding:14px">
+        <div style="width:70px;height:70px;border-radius:18px;background:#fff0f7;display:grid;place-items:center;font-size:40px">👗</div>
+        <div><b style="font-size:14px">Build your signature look</b><small style="display:block;margin-top:5px">Mix · Match · Shine ✨</small></div>
+        <button class="buy" onclick="showPage('closet')">STYLE</button>
+      </div>
+    </div>
+
+    <div id="closet" class="page">
+      <div class="section-head"><h2>My Closet 👗</h2><a>12 ITEMS</a></div>
+      <div class="closet-grid">
+        <div class="item"><div class="pic">👗</div><b>Pink Dream Dress</b><small>Rare · 300 🪙</small><button class="buy" onclick="equip(this)">EQUIP</button></div>
+        <div class="item"><div class="pic">👚</div><b>Sweet Blush Top</b><small>Classic · 180 🪙</small><button class="buy" onclick="equip(this)">EQUIP</button></div>
+        <div class="item"><div class="pic">👠</div><b>Glossy Heels</b><small>Rare · 250 🪙</small><button class="buy" onclick="equip(this)">EQUIP</button></div>
+        <div class="item"><div class="pic">👜</div><b>Mini Heart Bag</b><small>Special · 220 🪙</small><button class="buy" onclick="equip(this)">EQUIP</button></div>
+      </div>
+    </div>
+
+    <div id="room" class="page">
+      <div class="section-head"><h2>My Dream Room 🏠</h2><a>EDIT</a></div>
+      <div class="hero" style="min-height:390px;background:linear-gradient(#fbd9e9,#fff3f8);">
+        <div style="font-family:'Playfair Display';font-size:25px">Pink Paradise</div>
+        <div style="font-size:11px;color:#927789;margin-top:4px">Your cozy little world</div>
+        <div style="position:absolute;inset:95px 20px 20px;border-radius:25px;background:linear-gradient(#ffe8f2 0 55%,#e8bfd1 55%);overflow:hidden">
+          <div style="font-size:72px;text-align:center;padding-top:50px">🛏️</div>
+          <div style="position:absolute;bottom:20px;left:25px;font-size:42px">🪴</div>
+          <div style="position:absolute;bottom:18px;right:25px;font-size:38px">🧸</div>
+          <div style="position:absolute;top:18px;left:25px;font-size:28px">🖼️</div>
+        </div>
+      </div>
+      <div class="stats"><div class="stat"><b>8/20</b><span>DECOR ITEMS</span></div><div class="stat"><b>♥ 96%</b><span>COZY SCORE</span></div><div class="stat"><b>+120</b><span>XP TODAY</span></div></div>
+    </div>
+
+    <div id="profile" class="page">
+      <div class="hero" style="text-align:center;min-height:270px"><div style="font-size:95px;margin-top:15px">👱🏻‍♀️</div><div class="title">Luna</div><div class="subtitle">Pink Star · Level 07</div></div>
+      <div class="section-head"><h2>My achievements 🏆</h2></div>
+      <div class="challenges">
+        <div class="challenge"><div class="emoji">💎</div><h3>Style Icon</h3><p>Complete 10 outfits.</p></div>
+        <div class="challenge"><div class="emoji">🌸</div><h3>Dream Home</h3><p>Decorate your room.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="nav">
+    <button class="active" onclick="showPage('home',this)"><i>⌂</i>Home</button>
+    <button onclick="showPage('closet',this)"><i>♧</i>Closet</button>
+    <button onclick="showPage('room',this)"><i>⌂</i>My Room</button>
+    <button onclick="showPage('profile',this)"><i>♡</i>Profile</button>
+  </nav>
+
+  <div class="modal" id="modal"><div class="sheet">
+    <button class="close" onclick="closeModal()">×</button>
+    <h2 id="modalTitle">Challenge</h2><p id="modalText">Create your dream look.</p>
+    <div class="score" id="score">✨ 98</div>
+    <button class="primary" onclick="closeModal()">CLAIM REWARD · +250 🪙</button>
+  </div></div>
+</main></div>
+<script>
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn){document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+}
+function startChallenge(name){
+  document.getElementById('modalTitle').textContent=name+' ✨';
+  document.getElementById('modalText').textContent='Your look is ready for the spotlight. Tap below to complete the challenge.';
+  document.getElementById('score').textContent='✨ '+(92+Math.floor(Math.random()*8));
+  document.getElementById('modal').classList.add('show');
+}
+function openModal(type){
+  if(type==='profile'){
+    document.getElementById('modalTitle').textContent='Welcome back, Luna 💗';
+    document.getElementById('modalText').textContent='Your dream closet is waiting for you.';
+    document.getElementById('score').textContent='♡ 87';
+    document.getElementById('modal').classList.add('show');
+  }
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function equip(btn){
+  btn.textContent='EQUIPPED ✓';
+  btn.style.background='#ff5fa2';btn.style.color='white';
+}
+</script>
+</body>
+</html>
