@@ -1,4 +1,4 @@
-<title>IGWS–Teleport – معاينة ١٢</title>
+<title>IGWS–Teleport – معاينة ١٣</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="عرض تفاعلي ثلاثي الأبعاد: المحطة الأرضية الفضائية IGWS–Teleport وفرص الاستفادة في قطاع النقل العراقي">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1083,8 +1083,9 @@ const pad2 = (n) => String(n).padStart(2, '0');
 let idx = 0, world = null, heroCues = new Set();
 
 // —— الشعار: يُستخدم الملف الرسمي إن أضيف إلى img/mot-logo.png، وإلا يظهر موضع مخصص
-const logo = { ok: false, src: 'img/mot-logo.jpg' };
-await new Promise((res) => { const im = new Image(); im.onload = () => { logo.ok = true; res(); }; im.onerror = res; im.src = logo.src; setTimeout(res, 2500); });
+const logo = { ok: false, src: 'img/mot-logo.jpg' }; let logoWaited = false;
+// إن تأخر تحميل الشعار عن مهلة الانتظار (اتصال بطيء) يُعاد ملء جميع مواضعه فور اكتمال التحميل، بما فيها الشعار الصغير أعلى الشاشة
+await new Promise((res) => { const im = new Image(); im.onload = () => { const late = !logo.ok && logoWaited; logo.ok = true; res(); if (late) fillLogos(); }; im.onerror = res; im.src = logo.src; setTimeout(() => { logoWaited = true; res(); }, 2500); });
 function fillLogos(root = document) {
   root.querySelectorAll('[data-logo]').forEach((el) => {
     el.innerHTML = logo.ok

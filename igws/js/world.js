@@ -210,6 +210,14 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
   sat.position.copy(SAT);
   sat.lookAt(PIVOT);
   scene.add(sat);
+  // حدود القمر الفعلية (الجسم والألواح والهوائيات): رؤوس مجسّماته في إحداثياته المحلية بعد إزالة المتقاربة منها
+  // (شبكة 0.4 وحدة) — أدق من صندوق الإحاطة، وتُستخدم لإبقائه داخل الإطار الآمن
+  const SAT_PTS = (() => {
+    sat.updateMatrixWorld(true); const inv = sat.matrixWorld.clone().invert(), m4 = new THREE.Matrix4(), v = new THREE.Vector3(), seen = new Set(), out = [];
+    sat.traverse((o) => { if (!o.isMesh) return; m4.multiplyMatrices(inv, o.matrixWorld); const pa = o.geometry.attributes.position;
+      for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i).applyMatrix4(m4); const k = `${Math.round(v.x / 0.4)},${Math.round(v.y / 0.4)},${Math.round(v.z / 0.4)}`; if (!seen.has(k)) { seen.add(k); out.push(v.clone()); } } });
+    return out;
+  })();
   const satLight = new THREE.PointLight(0xdfe9ff, 2.5, 120, 1.2); satLight.position.copy(SAT).add(V(-20, 10, 30)); scene.add(satLight);
 
   // ===== البوابة المستقبلية
@@ -840,7 +848,8 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
       shift: SH, anchor: V(0, 20, 0), params: { stationLight: 1 },
       seq: [['n_sat', 1, 0.8, 1.4], ['downlink', 1, 1.2, 2.2], ['n_gs', 1, 0.8, 3.8], ['n_proc', 1, 0.8, 5.2], ['fiberOut', 0.6, 1.4, 5.6], ['n_net', 1, 0.8, 6.2],
         ['fiberOut', 1, 1.0, 7.4], ['n_user', 1, 0.8, 8.4], ['fiber', 1, 1.8, 10.0], ['uplink', 1, 1.6, 11.2]],
-      keys: [{ p: [165, 78, 205], t: [-6, 48, -40], d: 2.6, ease: 'inOut', lift: 20 }], idle: { sway: 3 },
+      // الهدف مرفوع (48←66) ليظهر القمر كاملاً تحت الحافة العليا مع هامش؛ موضع الكاميرا نفسه بلا تغيير
+      keys: [{ p: [165, 78, 205], t: [-6, 66, -40], d: 2.6, ease: 'inOut', lift: 20 }], idle: { sway: 3 },
     },
     contrib: {
       // منظور منخفض من جهة غرفة التجهيزات: إرسال واستقبال متزامنان وتمرير نحو الشبكة
@@ -851,7 +860,7 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     sectors: {
       shift: SH, anchor: V(0, 20, 0), params: { stationLight: 1, fiber: 1, uplink: 1 },
       seq: [['tl_met', 1, 1.4, 1.6], ['tl_tower', 1, 1.4, 2.6], ['tl_port', 1, 1.4, 3.6], ['fiberOut', 1, 1.6, 4.6], ['tl_train', 1, 1.4, 5.6]],
-      keys: [{ p: [40, 230, 330], t: [10, 0, -90], d: 3.2, ease: 'inOut', lift: 40 }], idle: { orbit: 0.01, around: V(10, 0, -90) },
+      keys: [{ p: [40, 230, 330], t: [10, 34, -90], d: 3.2, ease: 'inOut', lift: 40 }], idle: { orbit: 0.01, around: V(10, 0, -90) },
     },
     orbits: {
       shift: SH, params: { earth: 1, orbits: 1, earthLinks: 0 }, spin: true,
@@ -882,7 +891,7 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     },
     transport: {
       anchor: V(0, 22, 0), shift: SH, params: { tLinks: 1, stationLight: 1 },
-      keys: [{ p: [40, 230, 330], t: [10, 0, -90], d: 3.4, ease: 'inOut', lift: 40 }], idle: { orbit: 0.012, around: V(10, 0, -90) },
+      keys: [{ p: [40, 230, 330], t: [10, 34, -90], d: 3.4, ease: 'inOut', lift: 40 }], idle: { orbit: 0.012, around: V(10, 0, -90) },
     },
     aviation: {
       // الطائرة محور المشهد: تتوقف على المدرج، ولقطة منخفضة تُظهر الجناحين والمحركين والذيل وعجلات الهبوط
@@ -951,6 +960,7 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
   };
 
   // مسار الكاميرا لتجربة المدارات: محسوب من موضع المحطة وقمر الاتصالات عند زاوية دوران الأرض في المشهد
+  const VIA_R = 1700; // بُعد نقطة العبور عن مركز الأرض في الانتقال الأخير
   function eduKeys(spinDeg) {
     const sp = THREE.MathUtils.degToRad(spinDeg);
     const S = earth.eduWorld('station', sp), G = earth.eduWorld('geoCom', sp);
@@ -963,14 +973,17 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     { const c = camAt(n), f = mid.clone().sub(c).normalize(), r = new THREE.Vector3().crossVectors(f, V(0, 1, 0)); if (S.clone().sub(G).dot(r) > 0) n.negate(); }
     const fin = camAt(n);
     const T0 = EC.clone(), A = (v) => v.toArray();
+    const viaFin = (() => { const m = at(1290, 28).lerp(fin, 0.5); return EC.clone().addScaledVector(m.sub(EC).normalize(), VIA_R); })();
     return [
       { p: A(at(250, 22)), t: A(T0), d: 3.4, ease: 'inOut', lift: 60 },
       { p: A(at(250, 22)), t: A(T0), d: 6.4, ease: 'lin' },
       { p: A(at(760, 26)), t: A(T0), d: 3.6, ease: 'inOut', lift: 40 },
-      { p: A(at(760, 26)), t: A(T0), d: 5.4, ease: 'lin' },
+      // يبدأ الابتعاد نحو مرحلة GEO قبل ظهور أقمارها بقليل (4.0 بدل 5.4) حتى لا يظهر قمر الاتصالات مقصوصاً عند الحافة؛ والمدة نفسها تُضاف لثبات لقطة GEO
+      { p: A(at(760, 26)), t: A(T0), d: 4.0, ease: 'lin' },
       { p: A(at(1290, 28)), t: A(T0), d: 3.6, ease: 'inOut', lift: 40 },
-      { p: A(at(1290, 28)), t: A(T0), d: 5.4, ease: 'lin' },
-      { p: A(fin), t: A(mid.clone().add(V(0, Lk * 0.06, 0))), d: 3.8, ease: 'inOut', lift: 30 },
+      { p: A(at(1290, 28)), t: A(T0), d: 6.8, ease: 'lin' },
+      // الانتقال إلى اللقطة الأخيرة: يمر المسار على مسافة واسعة من الأرض بدل العبور فوق قمر الاتصالات، فيبقى القمر داخل الإطار
+      { p: A(fin), t: A(mid.clone().add(V(0, Lk * 0.06, 0))), d: 3.8, ease: 'inOut', lift: 30, via: A(viaFin) },
     ];
   }
 
@@ -980,17 +993,48 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     segFrom: null, idle: null, idleT: 0, base: null, shift: 0,
   };
   function playKeys(keys, idle) {
-    rig.segs = keys.map((k) => ({ p: V(...k.p), t: V(...k.t), d: k.d, ease: EASE[k.ease || 'inOut'], lift: k.lift || 0 }));
+    rig.segs = keys.map((k) => ({ p: V(...k.p), t: V(...k.t), d: k.d, ease: EASE[k.ease || 'inOut'], lift: k.lift || 0, via: k.via ? V(...k.via) : null }));
     rig.segIdx = 0; rig.segT = 0; rig.segFrom = { p: rig.pos.clone(), t: rig.tgt.clone() };
     rig.idle = idle; rig.idleT = 0; rig.base = null;
   }
+  // حارس الإطار الآمن للقمر الرئيسي (يعتمد حدود المجسّم الفعلية): إن لامس القمر الحافةَ العليا (هامش 4% من الارتفاع)
+  // تُرفع زاوية الكاميرا بنعومة حتى يظهر كاملاً (≤ 5°)، وإن كان الظاهر منه طرفاً صغيراً فقط أثناء الحركة تُخفض قليلاً (≤ 2°)
+  // فيخرج كلياً بدل أن يبدو مقصوصاً. التصحيح محدود فلا يغيّر تكوين المشاهد.
+  const SAT_SAFE_TOP = 0.92, SAT_SAFE_SIDE = 0.96, SAT_GUARD_CAP = 0.09, SAT_GUARD_OUT = 0.04;
+  const satGuard = { corr: 0, v: new THREE.Vector3() };
   function updateRig(dt) {
+    updateRigPath(dt);
+    let want = 0;
+    if (sat.visible) {
+      camera.updateMatrixWorld(); sat.updateMatrixWorld();
+      const v = satGuard.v; let x0 = 9, x1 = -9, y0 = 9, y1 = -9, front = true;
+      for (const c of SAT_PTS) {
+        v.copy(c).applyMatrix4(sat.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+        if (v.z > -camera.near) { front = false; break; }
+        v.applyMatrix4(camera.projectionMatrix);
+        x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+      }
+      if (front && y1 > SAT_SAFE_TOP && y0 < 1.02 && x1 > -SAT_SAFE_SIDE && x0 < SAT_SAFE_SIDE) {
+        const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), A = (y) => Math.atan(y * tanH);
+        const needIn = A(y1) - A(SAT_SAFE_TOP);      // رفع الزاوية حتى يظهر كاملاً مع الهامش
+        const needOut = A(1.02) - A(y0);             // أو خفضها قليلاً حتى يخرج طرفه الظاهر كلياً
+        if (needOut <= SAT_GUARD_OUT && needOut < needIn) want = -needOut;
+        else if (needIn <= SAT_GUARD_CAP) want = needIn;
+      }
+    }
+    // اقتراب ناعم وسريع مع حدّ أعلى لسرعة الدوران (0.5 راديان/ث) حتى لا يظهر التصحيح كاهتزاز
+    const step = (want - satGuard.corr) * (1 - Math.exp(-dt * 10)), lim = 0.5 * dt;
+    satGuard.corr += Math.max(-lim, Math.min(lim, step));
+    if (Math.abs(satGuard.corr) > 1e-4) camera.rotateX(satGuard.corr);
+  }
+  function updateRigPath(dt) {
     if (rig.segIdx < rig.segs.length) {
       const s = rig.segs[rig.segIdx];
       rig.segT += dt;
       const k = s.ease(clamp01(rig.segT / s.d));
       const a = rig.segFrom.p, b = s.p;
-      const mid = a.clone().add(b).multiplyScalar(0.5); mid.y += s.lift;
+      // نقطة التحكم: منتصف المسار مرفوعاً، أو نقطة عبور محددة (via) لتجنّب المرور فوق مجسّم قريب
+      const mid = s.via ? s.via : a.clone().add(b).multiplyScalar(0.5); if (!s.via) mid.y += s.lift;
       // منحنى بيزييه تربيعي
       rig.pos.set(0, 0, 0).addScaledVector(a, (1 - k) * (1 - k)).addScaledVector(mid, 2 * k * (1 - k)).addScaledVector(b, k * k);
       rig.tgt.lerpVectors(rig.segFrom.t, s.t, k);
@@ -3079,7 +3123,7 @@ function buildEOSat(M) {
   g.add(sMesh(new THREE.CircleGeometry(0.5, 20), K.lens, 0, 0, 2.81));
   g.add(sMesh(new THREE.BoxGeometry(6.5, 0.08, 2.2), K.panel, -4.4, 0, -0.4));
   g.add(sMesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 6).rotateZ(Math.PI / 2), M.steel, -1.4, 0, -0.4));
-  return g;
+  g.userData.sat = true; return g;
 }
 // اتصالات منخفضة المدار: جسم مسطح ومصفوفة شمسية طويلة واحدة
 function buildFlatSat(M) {
@@ -3088,7 +3132,7 @@ function buildFlatSat(M) {
   g.add(sMesh(new THREE.BoxGeometry(2.9, 0.06, 1.7), K.dark, 0, 0, 1.0).rotateX(Math.PI / 2));
   g.add(sMesh(new THREE.BoxGeometry(0.12, 0.12, 1.2), M.steel, 0, 0.3, -1.5));
   g.add(sMesh(new THREE.BoxGeometry(1.6, 0.06, 8.5), K.panel, 0, 0.35, -6.2));
-  return g;
+  g.userData.sat = true; return g;
 }
 // علمي وبيئي: جسم أسطواني وأذرع أجهزة ولوحان صغيران
 function buildSciSat(M) {
@@ -3098,7 +3142,7 @@ function buildSciSat(M) {
   g.add(sMesh(new THREE.CylinderGeometry(0.25, 0.3, 0.6, 12).rotateX(Math.PI / 2), K.dark, -0.5, 0.2, 1.6));
   for (const sx of [-1, 1]) g.add(sMesh(new THREE.BoxGeometry(3.2, 0.06, 1.6), K.panel, sx * 2.8, 0, -0.4));
   g.add(sMesh(new THREE.CylinderGeometry(0.04, 0.04, 3, 6), M.steel, 0, 1.9, 0));
-  return g;
+  g.userData.sat = true; return g;
 }
 // ملاحة (مثل GPS): جسم وجناحان ولوحة هوائيات متجهة نحو الأرض
 function buildNavSat(M) {
@@ -3107,7 +3151,7 @@ function buildNavSat(M) {
   g.add(sMesh(new THREE.BoxGeometry(2.0, 2.0, 0.12), M.white, 0, 0, 1.26));
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) g.add(sMesh(new THREE.CylinderGeometry(0.14, 0.14, 0.6, 8).rotateX(Math.PI / 2), M.steel, -0.6 + i * 0.6, -0.6 + j * 0.6, 1.6));
   for (const sx of [-1, 1]) { g.add(sMesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 6).rotateZ(Math.PI / 2), M.steel, sx * 1.7, 0, 0)); g.add(sMesh(new THREE.BoxGeometry(4.6, 0.08, 2.0), K.panel, sx * 4.6, 0, 0)); }
-  return g;
+  g.userData.sat = true; return g;
 }
 // بث تلفزيوني في GEO: جناحان طويلان وهوائيان عاكسان كبيران
 function buildBcastSat(M) {
@@ -3117,7 +3161,7 @@ function buildBcastSat(M) {
     const d = buildDish(M, { r: 1.5, f: 1.1, ribs: 6, simple: true }); d.position.set(sx * 1.9, 0, 0.6); d.rotation.y = sx * 0.5; g.add(d);
     g.add(sMesh(new THREE.BoxGeometry(6.2, 0.08, 2.0), K.panel, 0, sx * 5.0, -0.2).rotateZ(Math.PI / 2));
   }
-  return g;
+  g.userData.sat = true; return g;
 }
 // أرصاد جوية في GEO: جهاز تصوير نحو الأرض وجناح واحد ودرع شمسي
 function buildWxSat(M) {
@@ -3127,7 +3171,7 @@ function buildWxSat(M) {
   g.add(sMesh(new THREE.CircleGeometry(0.55, 18), K.lens, 0.3, 0.3, 2.61));
   g.add(sMesh(new THREE.BoxGeometry(8.0, 0.08, 2.4), K.panel, -5.6, 0, 0));
   g.add(sMesh(new THREE.BoxGeometry(0.1, 2.6, 2.6), K.silver, 1.6, 0, -0.4));
-  return g;
+  g.userData.sat = true; return g;
 }
 
 function buildSatellite(M, s = 1) {
@@ -3143,7 +3187,7 @@ function buildSatellite(M, s = 1) {
   const d1 = buildDish(M, { r: 1.9, f: 1.2, ribs: 6, simple: true }); d1.position.set(0, 0, 3.4); g.add(d1);
   const d2 = buildDish(M, { r: 1.3, f: 0.9, ribs: 6, simple: true }); d2.position.set(1.8, 1.8, 3.2); d2.rotation.y = 0.3; g.add(d2);
   g.scale.setScalar(s * 1.6);
-  return g;
+  g.userData.sat = true; return g;
 }
 
 function makeStars(n, R) {
