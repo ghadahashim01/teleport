@@ -1,6 +1,10 @@
 // محتوى المشاهد — كل نص هنا إما حقيقة منشورة (مع مصدرها)، أو شرح علمي عام، أو مقترح للتقييم بوسم واضح.
 // layout: hero | side | split | wide
 
+// رابط المنصة العام (المصدر الوحيد): رمز QR في شريحة الختام مولَّد من هذا الرابط بالضبط في img/qr-platform.svg
+// عند تغيير الرابط: عدّله هنا ثم أعد توليد الرمز بـ python3 tools/make-qr.py
+export const PLATFORM_URL = 'https://ghadahashim01.github.io/teleport/igws/';
+
 const SRC = {
   cmc: '<a class="src" href="https://cmc.iq/wp-content/uploads/2025/08/Regulation-on-the-licensing-of-ground-stations-for-space-services-English-language.pdf" target="_blank" rel="noopener">تعليمات هيأة الإعلام والاتصالات</a>',
   moc: '<span class="src">كتاب وزارة الاتصالات – مكتب الوزير، تشرين الأول 2026</span>',
@@ -107,6 +111,7 @@ export const SCENES = [
     kicker: '٠٧ · المدارات والمحطة',
     title: 'من LEO إلى GEO: أين تعمل الأقمار الصناعية؟',
     html: `
+      <p class="orb-hint" data-at="1.0">اضغط على أي مدار لعرضه حول الأرض</p>
       <ol class="orb-steps">
         <li data-at="1.0" data-step="0" class="os-leo"><span class="os-k"><b>LEO</b> المدار الأرضي المنخفض <i class="num">160–2,000 كم</i></span><small>قربه من الأرض يناسب كثيراً من تطبيقات التصوير والاستشعار عن بُعد، وتستخدمه بعض منظومات الاتصالات الحديثة.</small><span class="os-ex">رصد الأرض · اتصالات منخفضة المدار · علمية وبيئية</span></li>
         <li data-at="10.2" data-step="1" class="os-meo"><span class="os-k"><b>MEO</b> المدار الأرضي المتوسط <i class="num">2,000–35,786 كم</i></span><small>تُستخدم في منظومات الملاحة العالمية، ومنها <span class="latin">GPS</span> (نحو 20,200 كم)، لتحديد الموقع والتوقيت.</small></li>
@@ -197,15 +202,20 @@ export const SCENES = [
   {
     id: 'ports', label: 'الموانئ والنقل البحري', layout: 'side',
     kicker: '١٣ · الموانئ',
-    title: 'الموانئ والنقل البحري',
+    title: 'الموانئ والنقل البحري والمراقبة الملاحية',
     html: `
-      <div class="assess">
-        <section class="as-b"><h4>الفائدة العملية المحتملة</h4><ul><li>اتصال موثوق للمواقع الساحلية أو البعيدة.</li><li>دعم استمرارية الاتصالات في المواقع الملائمة.</li><li>مسار احتياطي في حالات الطوارئ.</li></ul></section>
-        <section class="as-c"><h4>الشروط اللازمة</h4><ul><li>التمييز بين خدمات المحطة على اليابسة واتصال السفن في عرض البحر.</li><li>اتصال السفن يحتاج منظومة على السفينة وخدمة متوافقة وترخيصاً (<span class="latin">ESV</span>) ${SRC.cmc}.</li><li>تكامل مع أنظمة الموانئ القائمة.</li></ul></section>
-        <section class="as-q"><h4>أسئلة تحتاج إلى تأكيد</h4><ul><li>ما المواقع الساحلية التي تحتاج إلى مسار إضافي؟</li><li>هل يدعم المشغّل الخدمة البحرية المطلوبة؟</li></ul></section>
+      <div class="mar">
+        <section class="mar-ent" data-at="0.8"><h4><svg class="mar-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>الجهات المعنية</h4>
+          <ul><li>الهيأة البحرية العراقية العليا</li><li>الشركة العامة لموانئ العراق</li><li>الشركة العامة للنقل البحري</li></ul></section>
+        <section class="mar-vts" data-at="1.6"><h4><svg class="mar-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6.4-6.4"/><circle cx="12" cy="12" r="1.2"/></svg>منظومة <span class="latin">VTS</span></h4>
+          <p>منظومة لمراقبة حركة السفن والمساعدة على تنظيم الملاحة البحرية ومتابعة دخول السفن وخروجها ضمن نطاق التغطية التشغيلية.</p>
+          <span class="mar-src">افتتحت الهيأة البحرية العراقية العليا مشروع المنظومة ${SRC.mot}</span></section>
+        <section class="mar-gold" data-at="3.0"><h4><svg class="mar-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 9.5l5 5M7 12l-3.5-3.5 3-3L10 9M12 17l3.5 3.5 3-3L15 14"/><rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(45 12 12)"/><path d="M17 3a4 4 0 0 1 4 4M17 6a1 1 0 0 1 1 1"/></svg>فرصة التكامل الفضائي ${PROPOSED}</h4>
+          <p>دراسة إمكانية الاستفادة من اتصالات الأقمار الصناعية <span class="latin">GEO</span> لربط مواقع المراقبة البعيدة أو توفير مسار اتصال احتياطي، بحسب احتياجات المنظومة وبنيتها الاتصالية الحالية.</p></section>
+        <section class="mar-req" data-at="4.4"><h4><svg class="mar-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9l2 2 4-4M8 15h8"/></svg>متطلبات الدراسة الفنية</h4>
+          <ul><li>التحقق من وسائل الاتصال المستخدمة حالياً في منظومة <span class="latin">VTS</span>.</li><li>تحديد المواقع التي تحتاج إلى اتصال إضافي أو احتياطي.</li><li>التحقق من توافق المحطة الأرضية والأقمار والتجهيزات والتغطية.</li><li>تقييم الأمن السيبراني والكلفة والجدوى التشغيلية.</li></ul></section>
       </div>
-      <p class="context">سياق ذو صلة: افتتحت الهيأة البحرية العراقية العليا مشروع منظومة <span class="latin">VTS</span> لمراقبة حركة السفن ${SRC.mot}. دعم اتصال مواقع المراقبة الساحلية أحد مجالات التقييم الممكنة.</p>
-      <p class="note">المسار الضوئي في المجسّم يوضح إمكانية ربط موقع ساحلي أو توفير اتصال احتياطي، ولا يعني تشغيل الرافعات أو تتبع السفن عبر المحطة.</p>`
+      <p class="note" data-at="5.4">المسار الضوئي في المجسّم توضيحي لإمكانية ربط موقع ساحلي، ولا يعني وجود ارتباط قائم بين منظومة <span class="latin">VTS</span> والمحطة.</p>`
   },
   {
     id: 'weather', label: 'الأرصاد والإنذار المبكر', layout: 'side',
@@ -278,14 +288,18 @@ export const SCENES = [
     id: 'thanks', label: 'الختام', layout: 'hero',
     html: `
       <div class="finale">
-        <div class="emblem" aria-hidden="true">
-          <div class="logo-card" data-logo-large></div>
-        </div>
         <h1 class="finale-title">شكراً لحسن استماعكم</h1>
         <p class="finale-sub">نرحّب بآرائكم وملاحظاتكم ومقترحاتكم</p>
+        <span class="fin-rule" aria-hidden="true"></span>
         <p class="finale-motto">معاً نحو توظيف التقنيات الحديثة لخدمة قطاعات النقل في العراق</p>
         <p class="finale-credit"><span class="cr-k">إعداد</span> المهندسة غادة هاشم</p>
-        <p class="finale-org">وزارة النقل العراقية <span>·</span> <span class="latin">Iraq Space Connectivity × Transportation</span></p>
-      </div>`
+        <span class="fin-rule short" aria-hidden="true"></span>
+      </div>
+      <aside class="finale-qr" aria-label="رمز QR لفتح المنصة">
+        <svg class="qr-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="3" height="3" rx=".4"/><rect x="13" y="8" width="3" height="3" rx=".4"/><rect x="8" y="13" width="3" height="3" rx=".4"/><path d="M13 13h3v3"/></svg>
+        <p class="qr-cap">امسح الرمز لفتح المنصة</p>
+        <span class="qr-rule" aria-hidden="true"></span>
+        <div class="qr-card" data-url="${PLATFORM_URL}"><img src="img/qr-platform.svg" alt="رمز QR يفتح المنصة"></div>
+      </aside>`
   },
 ];

@@ -9,8 +9,8 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { REGION } from './geo.js';
-import { tempoOf, MIN_MOVE } from './tempo.js';
+import { REGION } from './geo.js?v=18';
+import { tempoOf, MIN_MOVE } from './tempo.js?v=18';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const TURQ = 0x2ef2e0, ICE = 0x7fb6ff, FIBER = 0xa9c7e8, SLATE = 0x9aa7b8, GOLD = 0xc9a961;
@@ -811,7 +811,7 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     gateLines: 0, gateOpen: 0, gateVis: 1, particles: 0, stationLight: 0, align: 1,
     fiber: 0, uplink: 0, downlink: 0, downRemote: 0, tLinks: 0, railLink: 0,
     earth: 0, orbits: 0, pathA: 0, pathB: 0, hall: 0, walls: 1, routeLinks: 0, heat: 0, rx: 0, ana: 0, geoOnly: 0, geoLink: 0, finale: 0, planeHold: 0, wx: 0, scan: 0, route: 0, rain: 0, earthLinks: 0, fiberOut: 0, n_proc: 0, geoDim: 0, n_sat: 0, n_gs: 0, n_net: 0, n_user: 0, n_cut: 0, tl_tower: 0, tl_train: 0, tl_port: 0, tl_met: 0, mapVis: 0, mapLinks: 0, shift: 0, earthAngle: 0,
-    edu: 0, eduLink: 0, eduUp: 0, eduDn: 0, space: 0, wxNet: 0, warn: 0, portLink: 0, n_coast: 0,
+    edu: 0, eduLink: 0, eduUp: 0, eduDn: 0, fL: 1, fM: 1, fG: 1, space: 0, wxNet: 0, warn: 0, portLink: 0, n_coast: 0,
     oVis: 0, openAim: 0, oRings: 0, oUp: 0, os_plane: 0, os_tower: 0, os_fac: 0, os_train: 0, os_port: 0, oUpDim: 1,
   };
   const DEFAULTS = { ...P, gateVis: 0, walls: 1, stationLight: 1, earthAngle: null };
@@ -961,7 +961,9 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
 
   // مسار الكاميرا لتجربة المدارات: محسوب من موضع المحطة وقمر الاتصالات عند زاوية دوران الأرض في المشهد
   const VIA_R = 1700; // بُعد نقطة العبور عن مركز الأرض في الانتقال الأخير
-  function eduKeys(spinDeg) {
+  // لقطات المدارات عند النقر: [البعد عن مركز الأرض، زاوية الارتفاع بالدرجات] — منخفضة لتُرى المدارات من الجانب
+  const FOCUS_SHOT = { 1: [250, 9], 2: [790, 10], 3: [1320, 10] };
+  function eduKeys(spinDeg, focus = 0) {
     const sp = THREE.MathUtils.degToRad(spinDeg);
     const S = earth.eduWorld('station', sp), G = earth.eduWorld('geoCom', sp);
     const h = S.clone().sub(EC).setY(0).normalize().applyAxisAngle(V(0, 1, 0), THREE.MathUtils.degToRad(38));
@@ -974,6 +976,22 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
     const fin = camAt(n);
     const T0 = EC.clone(), A = (v) => v.toArray();
     const viaFin = (() => { const m = at(1290, 28).lerp(fin, 0.5); return EC.clone().addScaledVector(m.sub(EC).normalize(), VIA_R); })();
+    // اختيار مدار بالنقر: لقطة جانبية منخفضة لكل مدار (الأرض في المنتصف والمدار حولها)، أو اللقطة الأخيرة للمحطة
+    if (focus) {
+      // اتجاه اللقطة: من جهة العمود الأفقي لمستوى المدار حتى يظهر المدار قطعاً ناقصاً مفتوحاً لا خطاً مستقيماً
+      const sideAt = (k, d, el) => {
+        const nrm = earth.eduNormal(k).setY(0); let dir = h.clone();
+        if (nrm.length() > 0.25) { dir = nrm.normalize(); if (dir.dot(h) < 0) dir.negate(); dir.lerp(h, 0.25).normalize(); }
+        const e = THREE.MathUtils.degToRad(el);
+        return EC.clone().addScaledVector(dir, d * Math.cos(e)).add(V(0, d * Math.sin(e), 0));
+      };
+      const shot = focus === 4 ? { p: fin, t: mid.clone().add(V(0, Lk * 0.06, 0)) } : { p: sideAt(['', 'leo', 'meo', 'geo'][focus], FOCUS_SHOT[focus][0], FOCUS_SHOT[focus][1]), t: T0 };
+      const from = rig.pos.clone(), a0 = from.clone().sub(EC), b0 = shot.p.clone().sub(EC);
+      const k = { p: A(shot.p), t: A(shot.t), d: 2.2, ease: 'inOut', lift: 20 };
+      // إن كان الانتقال يدور حول الأرض بزاوية كبيرة يمر المسار خارج المدارات بدل العبور فوقها
+      if (a0.angleTo(b0) > 0.45) { const m = a0.clone().add(b0).normalize(); k.via = A(EC.clone().addScaledVector(m, Math.max(a0.length(), b0.length()) * 1.15)); }
+      return [k];
+    }
     return [
       { p: A(at(250, 22)), t: A(T0), d: 3.4, ease: 'inOut', lift: 60 },
       { p: A(at(250, 22)), t: A(T0), d: 6.4, ease: 'lin' },
@@ -1129,9 +1147,11 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
 
   // ===== تسميات ثلاثية الأبعاد (HTML)
   const labels = [];
-  function label(text, posFn, scenes, cls = '', cond = null) {
+  function label(text, posFn, scenes, cls = '', cond = null, click = null) {
     const el = document.createElement('div');
     el.className = 'tag3d ' + cls; el.innerHTML = text; el.setAttribute('aria-hidden', 'true');
+    // تسمية قابلة للنقر (مدارات الشريحة 7): تُرسل اختيار المدار إلى الصفحة
+    if (click) { el.classList.add('clickable'); el.addEventListener('click', click); }
     labelLayer?.appendChild(el);
     labels.push({ el, posFn, scenes: new Set(scenes), shown: false, cond });
   }
@@ -1162,19 +1182,19 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
   label('<b class="o-geo-c">GEO</b><small>جغرافي ثابت</small>', () => earth.ringLabel('geo'), ['orbits'], '', () => P.orbits > 0.5);
   // —— تسميات تجربة المدارات (قصيرة، وتظهر في مرحلتها فقط)
   const E = () => P.edu;
-  label('<b class="o-leo-c">LEO · المدار الأرضي المنخفض</b><small>160–2,000 كم فوق سطح الأرض</small>', () => earth.eduPos('leo'), ['geo'], 'tg-orb tg-leo', () => E() > 0.7 && E() < 3.4);
+  label('<b class="o-leo-c">LEO · المدار الأرضي المنخفض</b><small>160–2,000 كم فوق سطح الأرض</small>', () => earth.eduPos('leo'), ['geo'], 'tg-orb tg-leo', () => E() > 0.7 && E() < 3.4 && P.fL > 0.5, () => dispatchEvent(new CustomEvent('igws-orbit', { detail: 1 })));
   label('<b>رصد الأرض والتصوير</b>', () => earth.eduPos('leoEO').add(V(0, 6, 0)), ['geo'], 'tg-sat', () => E() > 0.85 && E() < 1.6);
   label('<b>اتصالات منخفضة المدار</b>', () => earth.eduPos('leoCom').add(V(0, 6, 0)), ['geo'], 'tg-sat', () => E() > 0.85 && E() < 1.6);
   label('<b>علمي وبيئي</b>', () => earth.eduPos('leoSci').add(V(0, 6, 0)), ['geo'], 'tg-sat', () => E() > 0.85 && E() < 1.6);
-  label('<b class="o-meo-c">MEO · المدار الأرضي المتوسط</b><small>2,000–35,786 كم</small>', () => earth.eduPos('meo'), ['geo'], 'tg-orb tg-meo', () => E() > 1.7 && E() < 3.4);
+  label('<b class="o-meo-c">MEO · المدار الأرضي المتوسط</b><small>2,000–35,786 كم</small>', () => earth.eduPos('meo'), ['geo'], 'tg-orb tg-meo', () => E() > 1.7 && E() < 3.4 && P.fM > 0.5, () => dispatchEvent(new CustomEvent('igws-orbit', { detail: 2 })));
   label('<b>قمر ملاحة · <span class="latin">GPS</span></b><small>نحو 20,200 كم</small>', () => earth.eduPos('gps').add(V(0, 12, 0)), ['geo'], 'tg-sat', () => E() > 1.8 && E() < 2.6);
-  label('<b class="o-geo-c">GEO · المدار الجغرافي الثابت</b><small>≈ 35,786 كم · دورة ≈ 24 ساعة</small>', () => earth.eduPos('geo'), ['geo'], 'tg-orb tg-geo', () => E() > 2.7 && E() < 3.6);
+  label('<b class="o-geo-c">GEO · المدار الجغرافي الثابت</b><small>≈ 35,786 كم · دورة ≈ 24 ساعة</small>', () => earth.eduPos('geo'), ['geo'], 'tg-orb tg-geo', () => E() > 2.7 && E() < 3.6, () => dispatchEvent(new CustomEvent('igws-orbit', { detail: 3 })));
   label('<b>قمر اتصالات</b>', () => earth.eduPos('geoCom').add(V(0, 26, 0)), ['geo'], 'tg-sat', () => E() > 2.8 && E() < 3.6);
   label('<b>بث تلفزيوني</b>', () => earth.eduPos('geoTv').add(V(0, 26, 0)), ['geo'], 'tg-sat', () => E() > 2.8 && E() < 3.6);
   label('<b>أرصاد جوية</b>', () => earth.eduPos('geoWx').add(V(0, 26, 0)), ['geo'], 'tg-sat', () => E() > 2.8 && E() < 3.6);
   label('<b>قمر اتصالات GEO</b><small>جسم في المدار</small>', () => earth.eduPos('geoCom').add(V(0, 24, 0)), ['geo'], 'tg-main', () => E() > 3.6);
   label('<b>محطة أرضية / <span class="latin">Teleport</span></b><small>منشأة على سطح الأرض</small>', () => earth.eduPos('station').add(V(0, -6, 0)), ['geo'], 'tg-main', () => E() > 3.6);
-  label('<b class="o-geo-c">مدار GEO</b><small>المسار الذي يتحرك فيه القمر</small>', () => earth.eduPos('geo'), ['geo'], 'tg-orb tg-geo', () => E() > 3.7);
+  label('<b class="o-geo-c">مدار GEO</b><small>المسار الذي يتحرك فيه القمر</small>', () => earth.eduPos('geo'), ['geo'], 'tg-orb tg-geo', () => E() > 3.7, () => dispatchEvent(new CustomEvent('igws-orbit', { detail: 3 })));
   label('<b>المحطة الأرضية</b><small>بوابة الاتصال الفضائي</small>', () => V(0, 30, 0), ['national'], 'tg-main', () => P.n_gs > 0.5);
   label('<b>الشبكة الأرضية</b>', () => HUB.clone().setY(15).add(V(0, 0, -9)), ['national'], '', () => P.n_net > 0.5);
   label('<b>مواقع خدمية</b>', () => T.port.clone().add(V(0, 16, 0)), ['national'], '', () => P.tl_port > 0.6);
@@ -1334,6 +1354,17 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
       return { x: (v.x * 0.5 + 0.5) * renderer.domElement.clientWidth, y: (-v.y * 0.5 + 0.5) * renderer.domElement.clientHeight };
     },
     sceneId: () => current,
+    // الشريحة 7: اختيار مدار بالنقر (1 LEO، 2 MEO، 3 GEO، 4 المحطة) — يوقف التتابع التلقائي ويعرض المدار المختار من الجانب
+    eduFocus(k) {
+      if (current !== 'geo' || !(k >= 1 && k <= 4)) return;
+      queue.length = 0;
+      const dim = 0.18, d = reducedMotion ? 0.001 : 1.4;
+      tween('edu', k, d, 0);
+      tween('fL', k === 2 || k === 3 ? dim : 1, d, 0); tween('fM', k === 3 ? dim : 1, d, 0); tween('fG', 1, d, 0);
+      for (const key of ['eduLink', 'eduUp', 'eduDn']) tween(key, k === 4 ? 1 : 0, d, k === 4 ? 0.6 : 0);
+      const keys = eduKeys(20, k);
+      playKeys(reducedMotion ? [{ ...keys[0], d: 0.001 }] : keys, { sway: 3 });
+    },
     setRunning: (v) => { running = v; clock.getDelta(); },
     renderer,
   };
@@ -2696,16 +2727,18 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
         if (on) {
           const st = (n) => clamp01(e - (n - 1));
           const fin = clamp01(e - 3);
-          eduRing.leo.m.opacity = st(1) * (1 - fin) * 0.9;
-          eduRing.meo.m.opacity = st(2) * (1 - fin) * 0.9;
-          eduRing.geo.m.opacity = st(3) * 0.95;
+          // fL/fM/fG: تعتيم المدارات غير المختارة عند اختيار مدار بالنقر (1 = ظاهر كاملاً)
+          const F = { leo: P.fL, meo: P.fM, geo: P.fG };
+          eduRing.leo.m.opacity = st(1) * (1 - fin) * 0.9 * F.leo;
+          eduRing.meo.m.opacity = st(2) * (1 - fin) * 0.9 * F.meo;
+          eduRing.geo.m.opacity = st(3) * 0.95 * F.geo;
           eduRing.geo.m.color.copy(eduRing.geo.col).lerp(new THREE.Color(TURQ), fin);
           for (const it of eduSats) {
             it.a += dt * it.sp; it.holder.position.set(Math.cos(it.a) * it.r, 0, Math.sin(it.a) * it.r); it.holder.lookAt(_w.set(0, 0, 0).applyMatrix4(it.holder.parent.matrixWorld));
-            const v = (it.k === 'leo' ? st(1) : st(2)) * (1 - fin); it.holder.visible = v > 0.02; it.obj.scale.setScalar(it.obj.userData.s0 * (0.4 + 0.6 * v));
+            const v = (it.k === 'leo' ? st(1) : st(2)) * (1 - fin) * clamp01((F[it.k] - 0.3) / 0.7); it.holder.visible = v > 0.02; it.obj.scale.setScalar(it.obj.userData.s0 * (0.4 + 0.6 * v));
           }
-          for (const [key, o] of Object.entries(geoSats)) { const s3 = (key === 'geoCom' ? 1 : 1 - fin) * st(3); o.visible = s3 > 0.02; o.scale.setScalar(o.userData.s0 * Math.max(0.001, 0.4 + 0.6 * s3)); }
-          for (const [it, sp] of eduHalo) { const v = it.k === 'leo' ? st(1) * (1 - fin) : it.k === 'meo' ? st(2) * (1 - fin) : st(3) * (it.key === 'geoCom' ? 1 : 1 - fin); sp.material.opacity = 0.55 * v; sp.visible = v > 0.01; }
+          for (const [key, o] of Object.entries(geoSats)) { const s3 = (key === 'geoCom' ? 1 : 1 - fin) * st(3) * clamp01((F.geo - 0.3) / 0.7); o.visible = s3 > 0.02; o.scale.setScalar(o.userData.s0 * Math.max(0.001, 0.4 + 0.6 * s3)); }
+          for (const [it, sp] of eduHalo) { const v = (it.k === 'leo' ? st(1) * (1 - fin) : it.k === 'meo' ? st(2) * (1 - fin) : st(3) * (it.key === 'geoCom' ? 1 : 1 - fin)) * clamp01((F[it.k] - 0.3) / 0.7); sp.material.opacity = 0.55 * v; sp.visible = v > 0.01; }
           stG.visible = fin > 0.02; stG.scale.setScalar(Math.max(0.001, fin));
           const L = P.eduLink;
           for (const a of arrows) a.material.opacity = L * 0.95;
@@ -2725,6 +2758,7 @@ export async function createWorld(canvas, { onCue = () => {}, labelLayer, reduce
         const R = eduRing[key]; if (R) { R.og.updateMatrixWorld(true); return R.tilt.localToWorld(V(-R.r * 0.966, 0, R.r * 0.259)); }
         return EC.clone();
       },
+      eduNormal(k) { const R = eduRing[k]; R.tilt.updateMatrixWorld(true); return V(0, 1, 0).transformDirection(R.tilt.matrixWorld); },
       ringLabel(k) { const R = ringObjs[k]; R.og.updateMatrixWorld(true); return R.tilt.localToWorld(tmp.set(R.r * 0.7071, 0, R.r * 0.7071).clone()); },
       iraqPos(s = 1) { spinG.updateMatrixWorld(true); return spinG.localToWorld(IQ.clone().multiplyScalar(s)); },
       foreignPos(s = 1) { spinG.updateMatrixWorld(true); return spinG.localToWorld(FOR.clone().multiplyScalar(s)); },
